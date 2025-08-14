@@ -139,19 +139,7 @@ export default function App() {
   useEffect(() => {
     runSelfTests();
   }, []);
-
-  const [asns, setAsns] = useState([]);
-  const refreshAsns = React.useCallback(async () => {
-    try {
-      const rows = await api.listASN();
-      setAsns(rows.map(toClient));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-  useEffect(() => { refreshAsns(); }, [refreshAsns]);
-
-  const notif = useMemo(() => {
+const notif = useMemo(() => {
     if (!asns) return { soon: [], overdue: [] };
     const soon = [];
     const overdue = [];
@@ -486,18 +474,8 @@ function FormInput() {
 // Tabel Data & Edit
 // =============================
 function TabelData() {
-  const { setToast, refreshAsns } = useApp() || {};
-  const [asns, setAsns] = useState([]);
-  const refreshAsns = React.useCallback(async () => {
-    try {
-      const rows = await api.listASN();
-      setAsns(rows.map(toClient));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-  useEffect(() => { refreshAsns(); }, [refreshAsns]);
-  const [q, setQ] = useState("");
+  const { setToast, asns, refreshAsns } = useApp() || {};
+const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // all | soon | overdue | ok
   const [compact, setCompact] = useState(false);
