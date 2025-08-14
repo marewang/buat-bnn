@@ -1,5 +1,7 @@
+// TODO: Replace local Dexie calls with api.listASN(), api.createASN(), etc.
+// Search for 'Dexie' and swap to cloud API.
 import React, { useEffect, useMemo, useState } from "react";
-import Dexie from "dexie";
+import * as api from './lib/apiClient'
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -38,7 +40,8 @@ const useApp = () => React.useContext(AppCtx);
 // =============================
 // Dexie (IndexedDB)
 // =============================
-const db = new Dexie("asnMonitoringDB");
+const db = // Dexie removed; using cloud API via apiClient
+
 db.version(1).stores({
   asns:
     "++id, nama, nip, tmtPns, riwayatTmtKgb, riwayatTmtPangkat, jadwalKgbBerikutnya, jadwalPangkatBerikutnya",

@@ -15,7 +15,8 @@
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
     "framer-motion": "^11.0.0",
-    "lucide-react": "^0.428.0"
+    "lucide-react": "^0.428.0",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
