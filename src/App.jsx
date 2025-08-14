@@ -2,7 +2,6 @@
 // Search for 'Dexie' and swap to cloud API.
 import React, { useEffect, useMemo, useState } from "react";
 import * as api from './lib/apiClient'
-import { useLiveQuery } from "dexie-react-hooks";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -38,13 +37,27 @@ const AppCtx = React.createContext(null);
 const useApp = () => React.useContext(AppCtx);
 
 // =============================
-// Dexie (IndexedDB)
+// Cloud API mode (PostgreSQL via /api)
 // =============================
-const db = // Dexie removed; using cloud API via apiClient
-
-db.version(1).stores({
-  asns:
-    "++id, nama, nip, tmtPns, riwayatTmtKgb, riwayatTmtPangkat, jadwalKgbBerikutnya, jadwalPangkatBerikutnya",
+// Mapping helpers snake_case <-> camelCase
+const toClient = (row) => ({
+  id: row.id,
+  nama: row.nama,
+  nip: row.nip,
+  tmtPns: row.tmt_pns || row.tmtPns || null,
+  riwayatTmtKgb: row.riwayat_tmt_kgb || row.riwayatTmtKgb || null,
+  riwayatTmtPangkat: row.riwayat_tmt_pangkat || row.riwayatTmtPangkat || null,
+  jadwalKgbBerikutnya: row.jadwal_kgb_berikutnya || row.jadwalKgbBerikutnya || null,
+  jadwalPangkatBerikutnya: row.jadwal_pangkat_berikutnya || row.jadwalPangkatBerikutnya || null,
+});
+const toServer = (row) => ({
+  nama: row.nama ?? null,
+  nip: row.nip ?? null,
+  tmt_pns: row.tmtPns ?? null,
+  riwayat_tmt_kgb: row.riwayatTmtKgb ?? null,
+  riwayat_tmt_pangkat: row.riwayatTmtPangkat ?? null,
+  jadwal_kgb_berikutnya: row.jadwalKgbBerikutnya ?? null,
+  jadwal_pangkat_berikutnya: row.jadwalPangkatBerikutnya ?? null,
 });
 
 // =============================
@@ -127,7 +140,16 @@ export default function App() {
     runSelfTests();
   }, []);
 
-  const asns = useLiveQuery(() => db.table("asns").toArray(), [], []);
+  const [asns, setAsns] = useState([]);
+  const refreshAsns = React.useCallback(async () => {
+    try {
+      const rows = await api.listASN();
+      setAsns(rows.map(toClient));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+  useEffect(() => { refreshAsns(); }, [refreshAsns]);
 
   const notif = useMemo(() => {
     if (!asns) return { soon: [], overdue: [] };
@@ -195,7 +217,7 @@ function RequireAuth({ authed, children }) {
 // =============================
 // Shell Layout (Topbar + Top Nav + Outlet)
 // =============================
-function Shell({ asns, notif }) {
+function Shell({ asns, notif, refreshAsns }) {
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -207,7 +229,7 @@ function Shell({ asns, notif }) {
   }, [toast]);
 
   return (
-    <AppCtx.Provider value={{ setToast, asns, notif }}>
+    <AppCtx.Provider value={{ setToast, asns, notif, refreshAsns }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
         {/* Topbar */}
         <header className="sticky top-0 z-40 backdrop-blur bg-white/75 border-b border-slate-200">
@@ -370,7 +392,7 @@ function Login({ onSuccess }) {
 // Form Input Data ASN
 // =============================
 function FormInput() {
-  const { setToast } = useApp() || {};
+  const { setToast, refreshAsns } = useApp() || {};
   const [form, setForm] = useState({
     nama: "",
     nip: "",
@@ -392,7 +414,8 @@ function FormInput() {
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const doSave = async () => {
-    await db.table("asns").add({ ...form, createdAt: new Date().toISOString() });
+    await api.createASN(toServer(form));
+    try { await refreshAsns?.(); } catch (e) {}
     setForm({ nama: "", nip: "", tmtPns: "", riwayatTmtKgb: "", riwayatTmtPangkat: "", jadwalKgbBerikutnya: "", jadwalPangkatBerikutnya: "" });
     setConfirmOpen(false);
     setToast?.({ type: "success", msg: "Data ASN disimpan." });
@@ -463,8 +486,17 @@ function FormInput() {
 // Tabel Data & Edit
 // =============================
 function TabelData() {
-  const { setToast } = useApp() || {};
-  const asns = useLiveQuery(() => db.table("asns").toArray(), [], []);
+  const { setToast, refreshAsns } = useApp() || {};
+  const [asns, setAsns] = useState([]);
+  const refreshAsns = React.useCallback(async () => {
+    try {
+      const rows = await api.listASN();
+      setAsns(rows.map(toClient));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+  useEffect(() => { refreshAsns(); }, [refreshAsns]);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // all | soon | overdue | ok
@@ -500,7 +532,8 @@ function TabelData() {
 
   const remove = async (id) => {
     if (!confirm("Hapus data ASN ini?")) return;
-    await db.table("asns").delete(id);
+    await api.deleteASN(id);
+    await refreshAsns?.();
     setToast?.({ type: "success", msg: "Data dihapus." });
   };
 
@@ -551,7 +584,7 @@ function TabelData() {
           <span className="sr-only">Export</span>
         </IconButton>
         <IconButton
-          onClick={() => importJSON(() => setToast?.({ type: "success", msg: "Import selesai." }))}
+          onClick={() => importJSON(async () => { try { await refreshAsns?.(); } catch(e){}; setToast?.({ type: "success", msg: "Import selesai." }); })}
           title="Import JSON"
         >
           <Upload className="w-4 h-4" />
@@ -661,7 +694,7 @@ function EditDialog({ data, onClose, onSaved }) {
   const onChange = (e) => setF({ ...f, [e.target.name]: e.target.value });
 
   const doSave = async () => {
-    await db.table("asns").update(f.id, { ...f });
+    await api.updateASN(f.id, toServer(f));
     onSaved?.();
     onClose?.();
   };
@@ -1026,7 +1059,9 @@ function importJSON(onDone) {
       const text = await file.text();
       const data = JSON.parse(text);
       if (!Array.isArray(data)) throw new Error("Format JSON tidak valid (harus array)");
-      await db.table("asns").bulkPut(data.map((r) => ({ ...r })));
+      for (const r of data) {
+        try { await api.createASN(toServer(r)); } catch (e) { console.warn("Gagal import:", e); }
+      }
       onDone?.();
     } catch (err) {
       console.warn("Import gagal:", err);
