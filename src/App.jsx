@@ -100,20 +100,6 @@ function runSelfTests() {
 export default function App() {
   const [authed, setAuthed] = useState(true); // bypass login by default
 
-  const [asns, setAsns] = useState([]);
-  const refreshAsns = React.useCallback(async () => {
-    try {
-      const rows = await api.listASN();
-      setAsns(rows.map(toClient));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-  useEffect(() => {
-    runSelfTests();
-    refreshAsns();
-  }, [refreshAsns]);
-
   const notif = useMemo(() => {
     if (!asns) return { soon: [], overdue: [] };
     const soon = [];
