@@ -100,6 +100,21 @@ function runSelfTests() {
 export default function App() {
   const [authed, setAuthed] = useState(true); // bypass login by default
 
+  // ⬇️ Tambahkan state & fetch data di App (sumber kebenaran tunggal)
+  const [asns, setAsns] = useState([]);
+  const refreshAsns = React.useCallback(async () => {
+    try {
+      const rows = await api.listASN();
+      setAsns(rows.map(toClient));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+  useEffect(() => {
+    runSelfTests();
+    refreshAsns();
+  }, [refreshAsns]);
+
   const notif = useMemo(() => {
     if (!asns) return { soon: [], overdue: [] };
     const soon = [];
@@ -112,11 +127,8 @@ export default function App() {
       if (row.jadwalPangkatBerikutnya)
         items.push({ jenis: "Kenaikan Pangkat Berikutnya", tanggal: row.jadwalPangkatBerikutnya });
       items.forEach((it) => {
-        if (in90(it.tanggal)) {
-          soon.push({ ...row, ...it });
-        } else if (new Date(it.tanggal) < new Date()) {
-          overdue.push({ ...row, ...it });
-        }
+        if (in90(it.tanggal)) soon.push({ ...row, ...it });
+        else if (new Date(it.tanggal) < new Date()) overdue.push({ ...row, ...it });
       });
     });
     const byDate = (a, b) => new Date(a.tanggal) - new Date(b.tanggal);
@@ -386,9 +398,7 @@ function TabelData() {
     setToast?.({ type: "success", msg: "Data dihapus." });
   };
 
-  // ...render tabel + EditDialog seperti sebelumnya
-}
-
+  // ⬇️ Semua UI (toolbar, return) harus di DALAM fungsi
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
@@ -427,7 +437,12 @@ function TabelData() {
           <span className="sr-only">Export</span>
         </IconButton>
         <IconButton
-          onClick={() => importJSON(async () => { await refreshAsns?.(); setToast?.({ type: "success", msg: "Import selesai." }); })}
+          onClick={() =>
+            importJSON(async () => {
+              await refreshAsns?.();
+              setToast?.({ type: "success", msg: "Import selesai." });
+            })
+          }
           title="Import JSON"
         >
           <Upload className="w-4 h-4" />
@@ -468,8 +483,7 @@ function TabelData() {
                   <Td>{r.nip || "-"}</Td>
                   <Td>{human(r.tmtPns)}</Td>
                   <Td>
-                    {human(r.riwayatTmtKgb)}{" "}
-                    <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} />
+                    {human(r.riwayatTmtKgb)} <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} />
                   </Td>
                   <Td>{human(r.jadwalKgbBerikutnya)}</Td>
                   <Td>{human(r.riwayatTmtPangkat)}</Td>
@@ -506,7 +520,10 @@ function TabelData() {
         open={!!editing}
         record={editing}
         onClose={() => setEditing(null)}
-        onSaved={async () => { await refreshAsns?.(); setToast?.({ type: "success", msg: "Perubahan disimpan." }); }}
+        onSaved={async () => {
+          await refreshAsns?.();
+          setToast?.({ type: "success", msg: "Perubahan disimpan." });
+        }}
       />
     </Card>
   );
