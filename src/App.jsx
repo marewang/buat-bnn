@@ -348,14 +348,13 @@ function TabelData() {
   const { setToast, asns, refreshAsns } = useApp() || {};
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all"); // all | soon | overdue | ok
+  const [statusFilter, setStatusFilter] = useState("all");
   const [compact, setCompact] = useState(false);
-  const [sortAsc, setSortAsc] = useState(true); // A→Z by default
+  const [sortAsc, setSortAsc] = useState(true);
 
   const filtered = useMemo(() => {
     if (!asns) return [];
     const term = q.trim().toLowerCase();
-
     const withMeta = (asns || []).map((r) => {
       const dueInKgb = r.jadwalKgbBerikutnya ? daysUntil(r.jadwalKgbBerikutnya) : null;
       const dueInPangkat = r.jadwalPangkatBerikutnya ? daysUntil(r.jadwalPangkatBerikutnya) : null;
@@ -369,11 +368,9 @@ function TabelData() {
     let list = withMeta.filter((r) => {
       const qMatch = !term || (r.nama || "").toLowerCase().includes(term) || (r.nip || "").toLowerCase().includes(term);
       const statusMatch =
-        statusFilter === "all"
-          ? true
-          : statusFilter === "ok"
-          ? r.status === "ok"
-          : r.status === statusFilter;
+        statusFilter === "all" ? true :
+        statusFilter === "ok" ? r.status === "ok" :
+        r.status === statusFilter;
       return qMatch && statusMatch;
     });
 
@@ -388,6 +385,9 @@ function TabelData() {
     await refreshAsns?.();
     setToast?.({ type: "success", msg: "Data dihapus." });
   };
+
+  // ...render tabel + EditDialog seperti sebelumnya
+}
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
