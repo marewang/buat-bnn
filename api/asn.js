@@ -1,6 +1,11 @@
-// api/asn.js
+// api/asn.js (ESM)
 import { getPool } from './_utils/db.js';
 
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
 async function readJSON(req) {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -9,8 +14,11 @@ async function readJSON(req) {
 }
 
 export default async function handler(req, res) {
-  const pool = getPool();
+  setCors(res);
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return; }
+
   res.setHeader('Content-Type', 'application/json');
+  const pool = getPool();
 
   try {
     if (req.method === 'GET') {
