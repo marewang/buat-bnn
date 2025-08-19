@@ -1,9 +1,17 @@
 // api/asn.js
-const { getPool } = require('./_utils/db');
+import { getPool } from './_utils/db.js';
 
-module.exports = async (req, res) => {
+async function readJSON(req) {
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  if (!chunks.length) return {};
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+export default async function handler(req, res) {
   const pool = getPool();
   res.setHeader('Content-Type', 'application/json');
+
   try {
     if (req.method === 'GET') {
       const { rows } = await pool.query('SELECT * FROM asns ORDER BY id DESC');
@@ -13,10 +21,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const chunks = [];
-      for await (const c of req) chunks.push(c);
-      const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
-
+      const body = await readJSON(req);
       const q = `
         INSERT INTO asns
           (nama, nip, tmt_pns, riwayat_tmt_kgb, riwayat_tmt_pangkat, jadwal_kgb_berikutnya, jadwal_pangkat_berikutnya)
@@ -41,8 +46,8 @@ module.exports = async (req, res) => {
     res.statusCode = 405;
     res.end(JSON.stringify({ error: 'Method not allowed' }));
   } catch (e) {
-    console.error(e);
+    console.error('ASN LIST/CREATE ERROR:', e);
     res.statusCode = 500;
-    res.end(JSON.stringify({ error: 'Server error' }));
+    res.end(JSON.stringify({ error: e.message || 'Server error' }));
   }
-};
+}
