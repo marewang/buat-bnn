@@ -5,13 +5,16 @@ export async function listASN() {
   return r.json();
 }
 
-export async function createASN(payload) {
-  const r = await fetch('/api/asn', {
-    method: 'POST',
+export async function updateASN(id, payload) {
+  const r = await fetch(`/api/asn/${id}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!r.ok) throw new Error('Failed create');
+  if (!r.ok) {
+    let msg = ''; try { msg = await r.text(); } catch {}
+    throw new Error(`Failed update (${r.status}): ${msg}`);
+  }
   return r.json();
 }
 
