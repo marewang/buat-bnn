@@ -1,4 +1,4 @@
-// api/asn.js (ESM)
+// api/asn.js
 import { getPool } from './_utils/db.js';
 
 function setCors(res) {
@@ -16,11 +16,11 @@ async function readJSON(req) {
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return; }
-
   res.setHeader('Content-Type', 'application/json');
-  const pool = getPool();
 
   try {
+    const pool = getPool();
+
     if (req.method === 'GET') {
       const { rows } = await pool.query('SELECT * FROM asns ORDER BY id DESC');
       res.statusCode = 200;
