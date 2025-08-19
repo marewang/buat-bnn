@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -86,32 +87,22 @@ const withinNextDays = (d, n) => {
 };
 
 /* =============================
-   (Optional) Self tests
-============================= */
-function runSelfTests() {
-  const base = new Date("2020-03-15");
-  if (ymd(addYears(base, 2)) !== "2022-03-15") console.warn("addYears +2 mismatch");
-  if (ymd(addYears(base, 4)) !== "2024-03-15") console.warn("addYears +4 mismatch");
-}
-
-/* =============================
    App Root
 ============================= */
 export default function App() {
   const [authed, setAuthed] = useState(true); // bypass login by default
-
-  // ⬇️ Tambahkan state & fetch data di App (sumber kebenaran tunggal)
   const [asns, setAsns] = useState([]);
+
   const refreshAsns = React.useCallback(async () => {
     try {
       const rows = await api.listASN();
       setAsns(rows.map(toClient));
     } catch (e) {
-      console.error(e);
+      console.warn("Gagal memuat ASN:", e);
     }
   }, []);
+
   useEffect(() => {
-    runSelfTests();
     refreshAsns();
   }, [refreshAsns]);
 
@@ -127,8 +118,11 @@ export default function App() {
       if (row.jadwalPangkatBerikutnya)
         items.push({ jenis: "Kenaikan Pangkat Berikutnya", tanggal: row.jadwalPangkatBerikutnya });
       items.forEach((it) => {
-        if (in90(it.tanggal)) soon.push({ ...row, ...it });
-        else if (new Date(it.tanggal) < new Date()) overdue.push({ ...row, ...it });
+        if (in90(it.tanggal)) {
+          soon.push({ ...row, ...it });
+        } else if (new Date(it.tanggal) < new Date()) {
+          overdue.push({ ...row, ...it });
+        }
       });
     });
     const byDate = (a, b) => new Date(a.tanggal) - new Date(b.tanggal);
@@ -191,7 +185,7 @@ function Shell({ asns, notif, refreshAsns }) {
               A
             </div>
             <div className="flex-1">
-              <h1 className="text-lg font-semibold leading-tight">
+              <h1 className="className text-lg font-semibold leading-tight">
                 Monitoring Kenaikan Pangkat & Kenaikan Gaji (ASN)
               </h1>
               <p className="text-xs text-slate-500">
@@ -398,7 +392,6 @@ function TabelData() {
     setToast?.({ type: "success", msg: "Data dihapus." });
   };
 
-  // ⬇️ Semua UI (toolbar, return) harus di DALAM fungsi
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
@@ -432,13 +425,13 @@ function TabelData() {
       </button>
 
       <div className="flex items-center gap-2 ml-auto">
-        <IconButton onClick={() => exportJSON(asns || [])} title="Export JSON">
+        <IconButton onClick={() => JSONUtils.export(asns || [])} title="Export JSON">
           <Download className="w-4 h-4" />
           <span className="sr-only">Export</span>
         </IconButton>
         <IconButton
           onClick={() =>
-            importJSON(async () => {
+            JSONUtils.import(async () => {
               await refreshAsns?.();
               setToast?.({ type: "success", msg: "Import selesai." });
             })
@@ -483,7 +476,8 @@ function TabelData() {
                   <Td>{r.nip || "-"}</Td>
                   <Td>{human(r.tmtPns)}</Td>
                   <Td>
-                    {human(r.riwayatTmtKgb)} <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} />
+                    {human(r.riwayatTmtKgb)}{" "}
+                    <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} />
                   </Td>
                   <Td>{human(r.jadwalKgbBerikutnya)}</Td>
                   <Td>{human(r.riwayatTmtPangkat)}</Td>
@@ -791,36 +785,43 @@ function ConfirmDialog({ open, title, children, onCancel, onConfirm, confirmText
 }
 
 /* =============================
-   Export / Import JSON
+   Export / Import JSON (no export; dipanggil internal)
 ============================= */
-function exportJSON(rows) {
-  const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `asn-export-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-async function importJSON(onDone) {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "application/json";
-  input.onchange = async (e) => {
-    try {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) throw new Error("Format JSON tidak valid (harus array)");
-      for (const r of data) {
-        try { await api.createASN(toServer(r)); } catch (err) { console.warn("Gagal import satu baris:", err); }
+const JSONUtils = {
+  export(rows) {
+    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `asn-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  async import(onDone) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = async (e) => {
+      try {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error("Format JSON tidak valid (harus array)");
+        for (const r of data) {
+          try {
+            await api.createASN(toServer(r));
+          } catch (err) {
+            console.warn("Gagal import satu baris:", err);
+          }
+        }
+        onDone?.();
+      } catch (err) {
+        console.warn("Import gagal:", err);
+        alert("Import gagal: " + err.message);
       }
-      onDone?.();
-    } catch (err) {
-      console.warn("Import gagal:", err);
-      alert("Import gagal: " + err.message);
-    }
-  };
-  input.click();
-}
+    };
+    input.click();
+  }
+};
