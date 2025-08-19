@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,7 +35,7 @@ const AppCtx = React.createContext(null);
 const useApp = () => React.useContext(AppCtx);
 
 /* =============================
-   Cloud API mapping helpers
+   Mapping helpers
 ============================= */
 const toClient = (row) => ({
   id: row.id,
@@ -89,8 +88,8 @@ const withinNextDays = (d, n) => {
 /* =============================
    App Root
 ============================= */
-export default function App() {
-  const [authed, setAuthed] = useState(true); // bypass login by default
+function App() {
+  const [authed, setAuthed] = useState(true);
   const [asns, setAsns] = useState([]);
 
   const refreshAsns = React.useCallback(async () => {
@@ -107,22 +106,18 @@ export default function App() {
   }, [refreshAsns]);
 
   const notif = useMemo(() => {
-    if (!asns) return { soon: [], overdue: [] };
     const soon = [];
     const overdue = [];
     const in90 = (d) => withinNextDays(d, 90);
-    asns.forEach((row) => {
+    (asns || []).forEach((row) => {
       const items = [];
       if (row.jadwalKgbBerikutnya)
         items.push({ jenis: "Kenaikan Gaji Berikutnya", tanggal: row.jadwalKgbBerikutnya });
       if (row.jadwalPangkatBerikutnya)
         items.push({ jenis: "Kenaikan Pangkat Berikutnya", tanggal: row.jadwalPangkatBerikutnya });
       items.forEach((it) => {
-        if (in90(it.tanggal)) {
-          soon.push({ ...row, ...it });
-        } else if (new Date(it.tanggal) < new Date()) {
-          overdue.push({ ...row, ...it });
-        }
+        if (in90(it.tanggal)) soon.push({ ...row, ...it });
+        else if (new Date(it.tanggal) < new Date()) overdue.push({ ...row, ...it });
       });
     });
     const byDate = (a, b) => new Date(a.tanggal) - new Date(b.tanggal);
@@ -178,22 +173,15 @@ function Shell({ asns, notif, refreshAsns }) {
   return (
     <AppCtx.Provider value={{ setToast, asns, notif, refreshAsns }}>
       <div className="min-h-screen bg-slate-50 text-slate-800">
-        {/* Topbar */}
         <header className="sticky top-0 z-40 backdrop-blur bg-white/75 border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white grid place-content-center font-bold">
-              A
-            </div>
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white grid place-content-center font-bold">A</div>
             <div className="flex-1">
-              <h1 className="className text-lg font-semibold leading-tight">
-                Monitoring Kenaikan Pangkat & Kenaikan Gaji (ASN)
-              </h1>
+              <h1 className="text-lg font-semibold leading-tight">Monitoring Kenaikan Pangkat & Kenaikan Gaji (ASN)</h1>
               <p className="text-xs text-slate-500">
-                {asns?.length || 0} data pegawai • {notif?.soon?.length || 0} due ≤90 hari •{" "}
-                {notif?.overdue?.length || 0} terlewat
+                {asns?.length || 0} data pegawai • {notif?.soon?.length || 0} due ≤90 hari • {notif?.overdue?.length || 0} terlewat
               </p>
             </div>
-
             <div className="hidden md:flex items-center gap-2">
               <TopLink to="/dashboard" icon={<Home className="w-4 h-4" />} label="Dashboard" active={pathname.startsWith("/dashboard")} />
               <TopLink to="/input" icon={<UserPlus className="w-4 h-4" />} label="Input" active={pathname.startsWith("/input")} />
@@ -203,12 +191,10 @@ function Shell({ asns, notif, refreshAsns }) {
           </div>
         </header>
 
-        {/* Outlet */}
         <main className="max-w-7xl mx-auto px-4 py-6">
           <Outlet />
         </main>
 
-        {/* Toast */}
         <AnimatePresence>
           {toast && (
             <motion.div
@@ -216,10 +202,8 @@ function Shell({ asns, notif, refreshAsns }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
               className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow ${
-                toast.type === "success"
-                  ? "bg-emerald-600 text-white"
-                  : toast.type === "error"
-                  ? "bg-rose-600 text-white"
+                toast.type === "success" ? "bg-emerald-600 text-white"
+                  : toast.type === "error" ? "bg-rose-600 text-white"
                   : "bg-slate-800 text-white"
               }`}
             >
@@ -238,10 +222,7 @@ function Shell({ asns, notif, refreshAsns }) {
 function Login({ onSuccess }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
-  const submit = (e) => {
-    e.preventDefault();
-    onSuccess?.();
-  };
+  const submit = (e) => { e.preventDefault(); onSuccess?.(); };
   return (
     <div className="max-w-sm mx-auto mt-16 bg-white border rounded-xl shadow p-6">
       <h2 className="text-lg font-semibold mb-4">Masuk</h2>
@@ -260,13 +241,9 @@ function Login({ onSuccess }) {
 function FormInput() {
   const { setToast, refreshAsns } = useApp() || {};
   const [form, setForm] = useState({
-    nama: "",
-    nip: "",
-    tmtPns: "",
-    riwayatTmtKgb: "",
-    riwayatTmtPangkat: "",
-    jadwalKgbBerikutnya: "",
-    jadwalPangkatBerikutnya: "",
+    nama: "", nip: "", tmtPns: "",
+    riwayatTmtKgb: "", riwayatTmtPangkat: "",
+    jadwalKgbBerikutnya: "", jadwalPangkatBerikutnya: "",
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -287,11 +264,7 @@ function FormInput() {
     setToast?.({ type: "success", msg: "Data ASN disimpan." });
   };
 
-  const submit = (e) => {
-    e.preventDefault();
-    if (!form.nama || !form.nip) return;
-    setConfirmOpen(true);
-  };
+  const submit = (e) => { e.preventDefault(); if (!form.nama || !form.nip) return; setConfirmOpen(true); };
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -312,10 +285,10 @@ function FormInput() {
           <FormRow label="Riwayat TMT Pangkat">
             <input type="date" name="riwayatTmtPangkat" value={form.riwayatTmtPangkat} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
           </FormRow>
-          <FormRow label="Jadwal Kenaikan Gaji Berikutnya (otomatis +2 thn)">
+          <FormRow label="Jadwal KGB Berikutnya (otomatis +2 thn)">
             <input type="date" name="jadwalKgbBerikutnya" value={form.jadwalKgbBerikutnya} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" />
           </FormRow>
-          <FormRow label="Jadwal Kenaikan Pangkat Berikutnya (otomatis +4 thn)">
+          <FormRow label="Jadwal Pangkat Berikutnya (otomatis +4 thn)">
             <input type="date" name="jadwalPangkatBerikutnya" value={form.jadwalPangkatBerikutnya} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" />
           </FormRow>
           <div className="md:col-span-2 flex justify-end gap-2 mt-2">
@@ -324,7 +297,6 @@ function FormInput() {
         </form>
       </Card>
 
-      {/* Verifikasi sebelum simpan */}
       <ConfirmDialog
         open={confirmOpen}
         title="Verifikasi Input"
@@ -359,7 +331,6 @@ function TabelData() {
   const [sortAsc, setSortAsc] = useState(true);
 
   const filtered = useMemo(() => {
-    if (!asns) return [];
     const term = q.trim().toLowerCase();
     const withMeta = (asns || []).map((r) => {
       const dueInKgb = r.jadwalKgbBerikutnya ? daysUntil(r.jadwalKgbBerikutnya) : null;
@@ -475,30 +446,16 @@ function TabelData() {
                   <Td className="font-medium">{r.nama || "-"}</Td>
                   <Td>{r.nip || "-"}</Td>
                   <Td>{human(r.tmtPns)}</Td>
-                  <Td>
-                    {human(r.riwayatTmtKgb)}{" "}
-                    <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} />
-                  </Td>
+                  <Td>{human(r.riwayatTmtKgb)} <StatusPill label="KGB" target={r.jadwalKgbBerikutnya} /></Td>
                   <Td>{human(r.jadwalKgbBerikutnya)}</Td>
                   <Td>{human(r.riwayatTmtPangkat)}</Td>
-                  <Td>
-                    {human(r.jadwalPangkatBerikutnya)}{" "}
-                    <StatusPill label="Pangkat" target={r.jadwalPangkatBerikutnya} />
-                  </Td>
+                  <Td>{human(r.jadwalPangkatBerikutnya)} <StatusPill label="Pangkat" target={r.jadwalPangkatBerikutnya} /></Td>
                   <Td>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditing(r)}
-                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-slate-50"
-                        title="Edit"
-                      >
+                      <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-slate-50" title="Edit">
                         <Edit3 className="w-4 h-4" /> Edit
                       </button>
-                      <button
-                        onClick={() => remove(r.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-rose-50"
-                        title="Hapus"
-                      >
+                      <button onClick={() => remove(r.id)} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-rose-50" title="Hapus">
                         <Trash2 className="w-4 h-4" /> Hapus
                       </button>
                     </div>
@@ -507,17 +464,12 @@ function TabelData() {
               ))}
             </tbody>
           </table>
-        </div>
       )}
-
       <EditDialog
         open={!!editing}
         record={editing}
         onClose={() => setEditing(null)}
-        onSaved={async () => {
-          await refreshAsns?.();
-          setToast?.({ type: "success", msg: "Perubahan disimpan." });
-        }}
+        onSaved={async () => { await refreshAsns?.(); setToast?.({ type: "success", msg: "Perubahan disimpan." }); }}
       />
     </Card>
   );
@@ -556,27 +508,13 @@ function EditDialog({ open, record, onClose, onSaved }) {
           <button onClick={onClose} className="text-slate-500 hover:text-slate-700">✕</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormRow label="Nama">
-            <input name="nama" value={f.nama || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
-          </FormRow>
-          <FormRow label="NIP">
-            <input name="nip" value={f.nip || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
-          </FormRow>
-          <FormRow label="TMT PNS">
-            <input type="date" name="tmtPns" value={f.tmtPns || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
-          </FormRow>
-          <FormRow label="Riwayat TMT Kenaikan Gaji">
-            <input type="date" name="riwayatTmtKgb" value={f.riwayatTmtKgb || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
-          </FormRow>
-          <FormRow label="Riwayat TMT Pangkat">
-            <input type="date" name="riwayatTmtPangkat" value={f.riwayatTmtPangkat || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" />
-          </FormRow>
-          <FormRow label="Jadwal KGB Berikutnya (otomatis +2 thn)">
-            <input type="date" name="jadwalKgbBerikutnya" value={f.jadwalKgbBerikutnya || ""} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" />
-          </FormRow>
-          <FormRow label="Jadwal Pangkat Berikutnya (otomatis +4 thn)">
-            <input type="date" name="jadwalPangkatBerikutnya" value={f.jadwalPangkatBerikutnya || ""} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" />
-          </FormRow>
+          <FormRow label="Nama"><input name="nama" value={f.nama || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" /></FormRow>
+          <FormRow label="NIP"><input name="nip" value={f.nip || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" /></FormRow>
+          <FormRow label="TMT PNS"><input type="date" name="tmtPns" value={f.tmtPns || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" /></FormRow>
+          <FormRow label="Riwayat TMT Kenaikan Gaji"><input type="date" name="riwayatTmtKgb" value={f.riwayatTmtKgb || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" /></FormRow>
+          <FormRow label="Riwayat TMT Pangkat"><input type="date" name="riwayatTmtPangkat" value={f.riwayatTmtPangkat || ""} onChange={onChange} className="w-full border rounded-lg px-3 py-2" /></FormRow>
+          <FormRow label="Jadwal KGB Berikutnya (otomatis +2 thn)"><input type="date" name="jadwalKgbBerikutnya" value={f.jadwalKgbBerikutnya || ""} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" /></FormRow>
+          <FormRow label="Jadwal Pangkat Berikutnya (otomatis +4 thn)"><input type="date" name="jadwalPangkatBerikutnya" value={f.jadwalPangkatBerikutnya || ""} readOnly className="w-full border rounded-lg px-3 py-2 bg-slate-50" /></FormRow>
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={onClose} className="border rounded-lg px-4 py-2 hover:bg-slate-50">Batal</button>
@@ -622,9 +560,7 @@ function PanelDashboard() {
 }
 function UsersCircle() {
   return (
-    <div className="w-5 h-5 rounded-full bg-indigo-600 text-white grid place-content-center text-[10px] font-bold">
-      U
-    </div>
+    <div className="w-5 h-5 rounded-full bg-indigo-600 text-white grid place-content-center text-[10px] font-bold">U</div>
   );
 }
 
@@ -633,7 +569,6 @@ function UsersCircle() {
 ============================= */
 function PanelNotifikasi() {
   const { notif } = useApp() || {};
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <Card title="Akan Jatuh Tempo (≤90 hari)">
@@ -727,29 +662,14 @@ function StatusPill({ label, target }) {
   if (!target) return null;
   const d = daysUntil(target);
   const base = "inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border font-medium";
-  if (d < 0)
-    return (
-      <span className={`${base} bg-rose-50 text-rose-700 border-rose-200`}>
-        <AlertTriangle className="w-3 h-3" /> {label}: Terlewat {Math.abs(d)}h
-      </span>
-    );
-  if (d <= 90)
-    return (
-      <span className={`${base} bg-amber-50 text-amber-800 border-amber-200`}>
-        <Clock className="w-3 h-3" /> {label}: {d}h lagi
-      </span>
-    );
-  return (
-    <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>
-      {label}: Aman
-    </span>
-  );
+  if (d < 0) return <span className={`${base} bg-rose-50 text-rose-700 border-rose-200`}><AlertTriangle className="w-3 h-3" /> {label}: Terlewat {Math.abs(d)}h</span>;
+  if (d <= 90) return <span className={`${base} bg-amber-50 text-amber-800 border-amber-200`}><Clock className="w-3 h-3" /> {label}: {d}h lagi</span>;
+  return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>{label}: Aman</span>;
 }
 function TopLink({ to, icon, label, active }) {
   return (
     <NavLink to={to} className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm border ${active ? "bg-slate-900 text-white border-slate-900" : "bg-white hover:bg-slate-50"}`}>
-      {icon}
-      <span>{label}</span>
+      {icon}<span>{label}</span>
     </NavLink>
   );
 }
@@ -757,11 +677,7 @@ function SegmentedControl({ value, onChange, options }) {
   return (
     <div className="inline-flex border rounded-lg overflow-hidden">
       {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={`px-3 py-1.5 text-sm ${value === opt.value ? "bg-slate-900 text-white" : "bg-white hover:bg-slate-50"}`}
-        >
+        <button key={opt.value} onClick={() => onChange(opt.value)} className={`px-3 py-1.5 text-sm ${value === opt.value ? "bg-slate-900 text-white" : "bg-white hover:bg-slate-50"}`}>
           {opt.label}
         </button>
       ))}
@@ -785,7 +701,7 @@ function ConfirmDialog({ open, title, children, onCancel, onConfirm, confirmText
 }
 
 /* =============================
-   Export / Import JSON (no export; dipanggil internal)
+   Export / Import JSON (lokal, tanpa export bernama)
 ============================= */
 const JSONUtils = {
   export(rows) {
@@ -797,7 +713,6 @@ const JSONUtils = {
     a.click();
     URL.revokeObjectURL(url);
   },
-
   async import(onDone) {
     const input = document.createElement("input");
     input.type = "file";
@@ -810,11 +725,7 @@ const JSONUtils = {
         const data = JSON.parse(text);
         if (!Array.isArray(data)) throw new Error("Format JSON tidak valid (harus array)");
         for (const r of data) {
-          try {
-            await api.createASN(toServer(r));
-          } catch (err) {
-            console.warn("Gagal import satu baris:", err);
-          }
+          try { await api.createASN(toServer(r)); } catch (err) { console.warn("Gagal import satu baris:", err); }
         }
         onDone?.();
       } catch (err) {
@@ -825,3 +736,5 @@ const JSONUtils = {
     input.click();
   }
 };
+
+export default App;
