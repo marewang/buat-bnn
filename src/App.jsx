@@ -6,7 +6,7 @@ import {
   SlidersHorizontal, ArrowUpDown,
 } from "lucide-react";
 import {
-  BrowserRouter as Router, Routes, Route, NavLink, Navigate, Outlet, useLocation,
+  HashRouter as Router, Routes, Route, NavLink, Navigate, Outlet, useLocation,
 } from "react-router-dom";
 import * as api from "./lib/apiClient";
 
@@ -53,7 +53,7 @@ function App() {
   const refreshAsns = React.useCallback(async () => {
     try {
       const rows = await api.listASN();
-      setAsns(rows.map(toClient));
+      setAsns(Array.isArray(rows) ? rows.map(toClient) : []);
     } catch (e) {
       console.warn("Gagal memuat ASN:", e);
     }
@@ -116,10 +116,10 @@ function Shell({ asns, notif, refreshAsns }) {
               </p>
             </div>
             <div className="hidden md:flex items-center gap-2">
-              <TopLink to="/dashboard" icon={<Home className="w-4 h-4" />} label="Dashboard" active={pathname.startsWith("/dashboard")} />
-              <TopLink to="/input" icon={<UserPlus className="w-4 h-4" />} label="Input" active={pathname.startsWith("/input")} />
-              <TopLink to="/data" icon={<List className="w-4 h-4" />} label="Data" active={pathname.startsWith("/data")} />
-              <TopLink to="/notifikasi" icon={<Bell className="w-4 h-4" />} label="Notifikasi" active={pathname.startsWith("/notifikasi")} />
+              <TopLink to="/dashboard" icon={<Home className="w-4 h-4" />} label="Dashboard" active={pathname.includes("/dashboard")} />
+              <TopLink to="/input" icon={<UserPlus className="w-4 h-4" />} label="Input" active={pathname.includes("/input")} />
+              <TopLink to="/data" icon={<List className="w-4 h-4" />} label="Data" active={pathname.includes("/data")} />
+              <TopLink to="/notifikasi" icon={<Bell className="w-4 h-4" />} label="Notifikasi" active={pathname.includes("/notifikasi")} />
             </div>
           </div>
         </header>
