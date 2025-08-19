@@ -1,16 +1,22 @@
 // api/_utils/db.js
-// Connection pool for PostgreSQL using 'pg'
-const { Pool } = require('pg');
+import { Pool } from 'pg';
 
-let _pool;
+let pool;
 
-function getPool() {
-  if (_pool) return _pool;
-  _pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+export function getPool() {
+  if (pool) return pool;
+
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error('ENV DATABASE_URL is missing');
+  }
+
+  pool = new Pool({
+    connectionString: url,
+    ssl: { rejectUnauthorized: false }, // wajib untuk Neon
+    max: 5,
+    idleTimeoutMillis: 0,
   });
-  return _pool;
-}
 
-module.exports = { getPool };
+  return pool;
+}
