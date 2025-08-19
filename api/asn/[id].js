@@ -1,14 +1,17 @@
 // api/asn/[id].js
 import { getPool } from '../_utils/db.js';
 
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
 function getId(req) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const parts = url.pathname.split('/').filter(Boolean); // ["api","asn","123"]
   const last = parts.pop() || '';
-  if (!/^\d+$/.test(last)) return null; // hanya angka
-  return last; // simpan string (aman utk bigint)
+  return /^\d+$/.test(last) ? last : null; // pakai string numeric (aman utk BIGINT)
 }
-
 async function readJSON(req) {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -17,16 +20,15 @@ async function readJSON(req) {
 }
 
 export default async function handler(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return; }
+
   const pool = getPool();
   res.setHeader('Content-Type', 'application/json');
 
   try {
     const id = getId(req);
-    if (!id) {
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: 'Invalid id' }));
-      return;
-    }
+    if (!id) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Invalid id' })); return; }
 
     if (req.method === 'GET') {
       const { rows } = await pool.query('SELECT * FROM asns WHERE id = $1::bigint', [id]);
@@ -61,15 +63,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const { rowCount } = await pool.query(
-        'DELETE FROM asns WHERE id = $1::bigint RETURNING id',
-        [id]
-      );
-      if (!rowCount) {
-        res.statusCode = 404;
-        res.end(JSON.stringify({ error: 'Not found' }));
-        return;
-      }
+      const { rowCount } = await pool.query('DELETE FROM asns WHERE id=$1::bigint RETURNING id', [id]);
+      if (!rowCount) { res.statusCode = 404; res.end(JSON.stringify({ error: 'Not found' })); return; }
       res.statusCode = 200; // balas JSON (lebih aman lintas proxy)
       res.end(JSON.stringify({ deleted: true, id }));
       return;
