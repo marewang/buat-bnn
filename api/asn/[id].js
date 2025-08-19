@@ -6,7 +6,14 @@ function getId(req) {
   const parts = url.pathname.split('/').filter(Boolean); // ["api","asn","123"]
   const last = parts.pop() || '';
   if (!/^\d+$/.test(last)) return null; // hanya angka
-  return last; // string "123" (biarkan string, biar aman utk bigint)
+  return last; // simpan string (aman utk bigint)
+}
+
+async function readJSON(req) {
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  if (!chunks.length) return {};
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
 export default async function handler(req, res) {
@@ -29,10 +36,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const chunks = [];
-      for await (const c of req) chunks.push(c);
-      const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
-
+      const body = await readJSON(req);
       const q = `
         UPDATE asns SET
           nama=$1, nip=$2, tmt_pns=$3, riwayat_tmt_kgb=$4, riwayat_tmt_pangkat=$5,
@@ -57,7 +61,6 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      // RETURNING agar jelas apakah ada row yang terhapus
       const { rowCount } = await pool.query(
         'DELETE FROM asns WHERE id = $1::bigint RETURNING id',
         [id]
@@ -67,7 +70,7 @@ export default async function handler(req, res) {
         res.end(JSON.stringify({ error: 'Not found' }));
         return;
       }
-      res.statusCode = 200; // gunakan 200 JSON, lebih aman di berbagai proxy
+      res.statusCode = 200; // balas JSON (lebih aman lintas proxy)
       res.end(JSON.stringify({ deleted: true, id }));
       return;
     }
