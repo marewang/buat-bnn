@@ -793,7 +793,7 @@ function ConfirmDialog({ open, title, children, onCancel, onConfirm, confirmText
 /* =============================
    Export / Import JSON
 ============================= */
-export function exportJSON(rows) {
+function exportJSON(rows) {
   const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -802,7 +802,7 @@ export function exportJSON(rows) {
   a.click();
   URL.revokeObjectURL(url);
 }
-export async function importJSON(onDone) {
+async function importJSON(onDone) {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "application/json";
