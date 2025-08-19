@@ -33,7 +33,11 @@ export async function updateASN(id, payload) {
 
 export async function deleteASN(id) {
   const r = await fetch(`/api/asn/${id}`, { method: 'DELETE' });
-  if (!r.ok && r.status !== 204) throw new Error('Failed delete');
+  if (!r.ok) {
+    let msg = '';
+    try { msg = await r.text(); } catch {}
+    throw new Error(`Failed delete (${r.status}): ${msg}`);
+  }
   return true;
 }
 
